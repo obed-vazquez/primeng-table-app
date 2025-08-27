@@ -86,3 +86,34 @@ Thumbs.db
 *.csv
 /.vscode/settings.json
 /Screenshots/
+
+
+# Node modules
+/node_modules/
+
+# Angular CLI
+/.angular/
+/dist/
+/out-tsc/
+/coverage/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Angular environments
+/environment*.ts
+
+# PrimeNG (y otras librerías de Angular que generen assets temporales)
+# No suelen requerir ignore extra, ya que se instalan en node_modules
+# pero si tienes assets generados por librerías específicas:
+*.tmp
+*.cache
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*.local
