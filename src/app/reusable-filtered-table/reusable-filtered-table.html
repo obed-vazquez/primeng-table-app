@@ -1,0 +1,81 @@
+<div class="chips-panel" *ngIf="activeChips.length">
+  <div class="chip" *ngFor="let c of activeChips">
+    <span class="chip-label">{{ c.col | titlecase }}: {{ c.value }}</span>
+    <button type="button" class="chip-remove" (click)="removeChip(c.col, c.value)" aria-label="Remove filter">&times;</button>
+  </div>
+</div>
+
+<p-table [value]="filteredRows">
+  <ng-template pTemplate="header">
+    <tr>
+      <th *ngFor="let col of cols" class="th-wrap">
+        <div class="th-inner">
+          <span>{{ col | titlecase }}</span>
+          <button *ngIf="isFilterable(col)" type="button" class="filter-trigger" (click)="toggleFilter(col, $event)">
+            <i class="pi pi-filter" [ngClass]="{'active-filter': hasActiveFilter(col)}"></i>
+          </button>
+        </div>
+      </th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-row>
+    <tr>
+      <td *ngFor="let col of cols">{{ row[col] }}</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+<ng-container *ngFor="let col of cols">
+  <div
+    *ngIf="showFilter[col]"
+    class="filter-panel"
+    [ngStyle]="{'top.px': panelPos[col]?.top, 'left.px': panelPos[col]?.left}"
+    (click)="filterClicked($event)"
+  >
+    <input
+      pInputText
+      type="text"
+      [(ngModel)]="searchText[col]"
+      placeholder="Filter..."
+      class="filter-search"
+    />
+
+    <label class="option select-all">
+      <p-checkbox
+        binary="true"
+        [ngModel]="selectAllChecked(col)"
+        (ngModelChange)="toggleSelectAll(col, $event)">
+      </p-checkbox>
+      <span>Select All</span>
+    </label>
+
+    <div class="options-scroll">
+      <label class="option" *ngFor="let opt of filteredOptions(col)">
+        <p-checkbox
+          binary="true"
+          [ngModel]="isPendingSelected(col, opt)"
+          (ngModelChange)="setPendingSelected(col, opt, $event)">
+        </p-checkbox>
+        <span>{{ opt }}</span>
+      </label>
+    </div>
+
+    <div class="filter-actions">
+      <button
+        pButton
+        type="button"
+        label="Reset"
+        class="p-button-outlined p-button-sm"
+        (click)="reset(col)">
+      </button>
+      <button
+        pButton
+        type="button"
+        label="Apply"
+        class="p-button-sm"
+        (click)="apply(col)">
+      </button>
+    </div>
+  </div>
+</ng-container>
