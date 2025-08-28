@@ -18,11 +18,30 @@ export class ReusableFilteredTable implements OnChanges {
   @Input() ignore: string[] = [];
   @Input() filterable: string[] = ['id','status','name'];
 
+  rowsPerPageOptions = [5, 10, 20, 50];
+  rowsPerPage = 10;
+  currentPage = 1;
+  totalPages = 1;
+  pagedRows: any[] = [];
+  startRow = 0;
+  endRow = 0;
+
   defaultData = [
     { id: 1, name: 'Alpha', status: 'Active', createdAt: '2025-01-01' },
     { id: 2, name: 'Beta', status: 'Inactive', createdAt: '2025-02-10' },
     { id: 3, name: 'Gamma', status: 'Active', createdAt: '2025-03-05' },
-    { id: 4, name: 'Beta', status: 'Active', createdAt: '2025-04-12' }
+    { id: 4, name: 'Delta', status: 'Active', createdAt: '2025-04-12' },
+    { id: 5, name: 'Epsilon', status: 'Pending', createdAt: '2025-05-15' },
+    { id: 6, name: 'Zeta', status: 'Inactive', createdAt: '2025-06-20' },
+    { id: 7, name: 'Eta', status: 'Active', createdAt: '2025-07-08' },
+    { id: 8, name: 'Theta', status: 'Pending', createdAt: '2025-08-12' },
+    { id: 9, name: 'Iota', status: 'Active', createdAt: '2025-09-03' },
+    { id: 10, name: 'Kappa', status: 'Inactive', createdAt: '2025-10-17' },
+    { id: 11, name: 'Lambda', status: 'Active', createdAt: '2025-11-25' },
+    { id: 12, name: 'Mu', status: 'Pending', createdAt: '2025-12-05' },
+    { id: 13, name: 'Nu', status: 'Active', createdAt: '2024-01-30' },
+    { id: 14, name: 'Xi', status: 'Inactive', createdAt: '2024-02-14' },
+    { id: 15, name: 'Omicron', status: 'Pending', createdAt: '2024-03-22' }
   ];
 
   searchText: Record<string, string> = {};
@@ -53,7 +72,19 @@ export class ReusableFilteredTable implements OnChanges {
   }
 
   ngOnChanges(): void {
-    for (const c of this.cols) if (this.isFilterable(c)) this.ensureState(c);
+    this.appliedSelected = {};
+    this.pendingSelected = {};
+    
+    for (const c of this.cols) {
+      if (this.isFilterable(c)) {
+        this.ensureState(c);
+      }
+    }
+  }
+
+  ngOnInit(): void {
+    console.log('Calling updatePagination from ngOnInit');
+    this.updatePagination();
   }
 
   isFilterable(col: string): boolean {
@@ -71,11 +102,14 @@ export class ReusableFilteredTable implements OnChanges {
 
   ensureState(col: string): void {
     const opts = this.uniqueValues(col);
-    if (!this.appliedSelected[col]) this.appliedSelected[col] = new Set(opts);
-    if (!this.pendingSelected[col]) this.pendingSelected[col] = new Set(this.appliedSelected[col]);
-    const keep = new Set(opts);
-    this.appliedSelected[col] = new Set([...this.appliedSelected[col]].filter(v => keep.has(v)));
-    this.pendingSelected[col] = new Set([...this.pendingSelected[col]].filter(v => keep.has(v)));
+    
+    if (!this.appliedSelected[col]) {
+      this.appliedSelected[col] = new Set(opts);
+    }
+    if (!this.pendingSelected[col]) {
+      this.pendingSelected[col] = new Set(opts);
+    }
+    
     if (this.searchText[col] === undefined) this.searchText[col] = '';
     if (this.showFilter[col] === undefined) this.showFilter[col] = false;
   }
@@ -109,6 +143,8 @@ export class ReusableFilteredTable implements OnChanges {
     this.ensureState(col);
     this.appliedSelected[col] = new Set(this.pendingSelected[col]);
     this.showFilter[col] = false;
+    this.currentPage = 1;
+    this.updatePagination();
   }
 
   reset(col: string): void {
@@ -117,6 +153,8 @@ export class ReusableFilteredTable implements OnChanges {
     this.pendingSelected[col] = new Set(u);
     this.searchText[col] = '';
     this.showFilter[col] = false;
+    this.currentPage = 1;
+    this.updatePagination();
   }
 
   get filteredRows(): any[] {
@@ -175,6 +213,8 @@ export class ReusableFilteredTable implements OnChanges {
     } else {
       this.pendingSelected[col] = new Set(this.appliedSelected[col]);
     }
+    this.currentPage = 1;
+    this.updatePagination();
   }
 
   hasActiveFilter(col: string): boolean {
@@ -183,5 +223,20 @@ export class ReusableFilteredTable implements OnChanges {
     if (!sel) return false;
     return sel.size > 0 && sel.size < u.length;
   }
+  
+  updatePagination() {
+    const filtered = this.filteredRows;
+    this.totalPages = Math.max(1, Math.ceil(filtered.length / this.rowsPerPage));
+    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    this.startRow = (this.currentPage - 1) * this.rowsPerPage;
+    this.endRow = Math.min(this.startRow + this.rowsPerPage, filtered.length);
+    this.pagedRows = filtered.slice(this.startRow, this.endRow);
+  }
 
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updatePagination();
+    }
+  }
 }

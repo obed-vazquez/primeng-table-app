@@ -5,7 +5,7 @@
   </div>
 </div>
 
-<p-table [value]="filteredRows">
+<p-table [value]="pagedRows">
   <ng-template pTemplate="header">
     <tr>
       <th *ngFor="let col of cols" class="th-wrap">
@@ -26,18 +26,38 @@
   </ng-template>
 </p-table>
 
+<div class="pagination-bar">
+  <span>Rows per page:
+    <select [(ngModel)]="rowsPerPage" (change)="updatePagination()">
+      <option *ngFor="let opt of rowsPerPageOptions" [value]="opt">{{ opt }}</option>
+    </select>
+  </span>
+
+  <span>
+    Showing <b>{{ startRow + 1 }}</b> to <b>{{ endRow }}</b> of {{ filteredRows.length }} elements
+  </span>
+
+  <span class="current-page">
+    Pages <b>{{ currentPage }}</b> of {{ totalPages }}
+    <button (click)="goToPage(1)" [disabled]="currentPage === 1">«</button>
+    <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+    <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">›</button>
+    <button (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">»</button>
+  </span>
+</div>
+
 <ng-container *ngFor="let col of cols">
   <div
     *ngIf="showFilter[col]"
     class="filter-panel"
-    [ngStyle]="{'top.px': panelPos[col]?.top, 'left.px': panelPos[col]?.left}"
+    [ngStyle]="{'top.px': panelPos[col].top, 'left.px': panelPos[col].left}"
     (click)="filterClicked($event)"
   >
     <input
       pInputText
       type="text"
       [(ngModel)]="searchText[col]"
-      placeholder="Filter..."
+      placeholder="Search..."
       class="filter-search"
     />
 
@@ -47,7 +67,7 @@
         [ngModel]="selectAllChecked(col)"
         (ngModelChange)="toggleSelectAll(col, $event)">
       </p-checkbox>
-      <span>Select All</span>
+      <span>(Unselect/Select All)</span>
     </label>
 
     <div class="options-scroll">
