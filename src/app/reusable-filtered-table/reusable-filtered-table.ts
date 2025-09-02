@@ -18,14 +18,6 @@ export class ReusableFilteredTable implements OnChanges {
   @Input() ignore: string[] = [];
   @Input() filterable: string[] = ['id','status','name'];
 
-  rowsPerPageOptions = [5, 10, 20, 50];
-  rowsPerPage = 10;
-  currentPage = 1;
-  totalPages = 1;
-  pagedRows: any[] = [];
-  startRow = 0;
-  endRow = 0;
-
   defaultData = [
     { id: 1, name: 'Alpha', status: 'Active', createdAt: '2025-01-01' },
     { id: 2, name: 'Beta', status: 'Inactive', createdAt: '2025-02-10' },
@@ -83,7 +75,6 @@ export class ReusableFilteredTable implements OnChanges {
   }
 
   ngOnInit(): void {
-    console.log('Calling updatePagination from ngOnInit');
     this.updatePagination();
   }
 
@@ -174,6 +165,7 @@ export class ReusableFilteredTable implements OnChanges {
   @HostListener('document:click')
   onOutsideClick(): void {
     for (const col of Object.keys(this.showFilter)) this.showFilter[col] = false;
+    this.showColumnPanel = false;
   }
 
   panelPos: Record<string, { top: number, left: number }> = {};
@@ -223,20 +215,133 @@ export class ReusableFilteredTable implements OnChanges {
     if (!sel) return false;
     return sel.size > 0 && sel.size < u.length;
   }
+
+  hasAnyActiveFilter(): boolean {
+    return this.cols.some(col => {
+      if (!this.isFilterable(col)) return false;
+      const u = this.uniqueValues(col);
+      const sel = this.appliedSelected[col];
+      if (!sel) return false;
+      return sel.size > 0 && sel.size < u.length;
+    });
+  }
   
+  rowsPerPageOptions = [5, 10, 20, 50];
+  rowsPerPage = 10;
+  currentPage = 1;
+  totalPages = 1;
+  pagedRows: any[] = [];
+  startRow = 0;
+  endRow = 0;
+
+  onRowsPerPageChange(event?: any) {
+    if (typeof this.rowsPerPage === 'string') {
+      this.rowsPerPage = parseInt(this.rowsPerPage, 10);
+    }
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
   updatePagination() {
     const filtered = this.filteredRows;
     this.totalPages = Math.max(1, Math.ceil(filtered.length / this.rowsPerPage));
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
     this.startRow = (this.currentPage - 1) * this.rowsPerPage;
     this.endRow = Math.min(this.startRow + this.rowsPerPage, filtered.length);
     this.pagedRows = filtered.slice(this.startRow, this.endRow);
   }
 
   goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-      this.updatePagination();
+    this.currentPage = Math.max(1, Math.min(page, this.totalPages));
+    this.updatePagination();
+  }
+
+  columnSearchText: string = '';
+  pendingIgnore: string[] = [];
+
+  
+  showColumnPanel = false;
+  columnPanelPos = { top: 0, left: 0 };
+
+  get allCols(): string[] {
+    const set = new Set<string>();
+    for (const r of this.rows) Object.keys(r).forEach(k => set.add(k));
+    return Array.from(set);
+  }
+
+  toggleColumn(col: string, show: boolean): void {
+    const idx = this.ignore.indexOf(col);
+    if (show && idx !== -1) {
+      this.ignore.splice(idx, 1);
+    } else if (!show && idx === -1) {
+      this.ignore.push(col);
+    }
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+  
+  filteredColumnOptions(): string[] {
+    const q = (this.columnSearchText || '').toLowerCase();
+    return this.allCols.filter(col => col.toLowerCase().includes(q));
+  }
+
+  allColumnsSelected(): boolean {
+    return this.filteredColumnOptions().every(col => !this.pendingIgnore.includes(col));
+  }
+
+  toggleSelectAllColumns(checked: boolean): void {
+    const filtered = this.filteredColumnOptions();
+    if (checked) {
+      this.pendingIgnore = this.pendingIgnore.filter(col => !filtered.includes(col));
+    } else {
+      this.pendingIgnore = Array.from(new Set([...this.pendingIgnore, ...filtered]));
     }
   }
+
+  setPendingIgnore(col: string, checked: boolean): void {
+    if (!checked) {
+      if (!this.pendingIgnore.includes(col)) this.pendingIgnore.push(col);
+    } else {
+      this.pendingIgnore = this.pendingIgnore.filter(c => c !== col);
+    }
+  }
+
+  resetColumns(): void {
+    this.pendingIgnore = [];
+    this.columnSearchText = '';
+    this.applyColumns();
+  }
+
+  applyColumns(): void {
+    const prevVisible = this.allCols.filter(col => !this.ignore.includes(col));
+    const nextVisible = this.allCols.filter(col => !this.pendingIgnore.includes(col));
+    const nowHidden = prevVisible.filter(col => !nextVisible.includes(col));
+
+    for (const col of nowHidden) {
+      this.appliedSelected[col] = new Set(this.uniqueValues(col));
+      this.pendingSelected[col] = new Set(this.uniqueValues(col));
+      this.searchText[col] = '';
+      this.showFilter[col] = false;
+    }
+
+    this.ignore = [...this.pendingIgnore];
+    this.showColumnPanel = false;
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  toggleColumnPanel(event: MouseEvent): void {
+    event.stopPropagation();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.columnPanelPos = { top: rect.bottom, left: rect.left };
+    this.showColumnPanel = !this.showColumnPanel;
+    if (this.showColumnPanel) {
+      for (const col of Object.keys(this.showFilter)) this.showFilter[col] = false;
+      this.pendingIgnore = [...this.ignore];
+      this.columnSearchText = '';
+    }
+  }
+
 }

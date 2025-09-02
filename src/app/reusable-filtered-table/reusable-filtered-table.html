@@ -1,4 +1,69 @@
-<div class="chips-panel" *ngIf="activeChips.length">
+
+
+<!-- region Show/Hide Columns Control -->
+<div class="show-hide-columns-control" (click)="toggleColumnPanel($event)">
+  <i class="pi pi-cog control-icon"></i>
+  <span class="control-label">Show/hide columns</span>
+  <i class="pi pi-info-circle control-icon info-icon"></i>
+</div>
+<!-- endregion Show/Hide Columns Control -->
+
+<!-- region Column Show/Hide Panel -->
+<div
+  *ngIf="showColumnPanel"
+  class="filter-panel column-panel"
+  [ngStyle]="{'top.px': columnPanelPos.top, 'left.px': columnPanelPos.left}"
+  (click)="filterClicked($event)"
+>
+  <input
+    pInputText
+    type="text"
+    [(ngModel)]="columnSearchText"
+    placeholder="Search columns..."
+    class="filter-search"
+  />
+
+  <label class="option select-all">
+    <p-checkbox
+      binary="true"
+      [ngModel]="allColumnsSelected()"
+      (ngModelChange)="toggleSelectAllColumns($event)">
+    </p-checkbox>
+    <span>(Select All)</span>
+  </label>
+
+  <div class="options-scroll">
+    <label class="option" *ngFor="let col of filteredColumnOptions()">
+      <p-checkbox
+        binary="true"
+        [ngModel]="!pendingIgnore.includes(col)"
+        (ngModelChange)="setPendingIgnore(col, $event)">
+      </p-checkbox>
+      <span>{{ col | titlecase }}</span>
+    </label>
+  </div>
+
+  <div class="filter-actions">
+    <button
+      pButton
+      type="button"
+      label="Reset"
+      class="p-button-outlined p-button-sm"
+      (click)="resetColumns()">
+    </button>
+    <button
+      pButton
+      type="button"
+      label="Apply"
+      class="p-button-sm"
+      (click)="applyColumns()">
+    </button>
+  </div>
+</div>
+<!-- endregion Column Show/Hide Panel -->
+
+<div class="chips-panel filter-trigger">
+  <i class="pi pi-filter-fill chips-panel-icon" [ngClass]="hasAnyActiveFilter() ? 'active-filter' : ''"></i>
   <div class="chip" *ngFor="let c of activeChips">
     <span class="chip-label">{{ c.col | titlecase }}: {{ c.value }}</span>
     <button type="button" class="chip-remove" (click)="removeChip(c.col, c.value)" aria-label="Remove filter">&times;</button>
@@ -28,13 +93,13 @@
 
 <div class="pagination-bar">
   <span>Rows per page:
-    <select [(ngModel)]="rowsPerPage" (change)="updatePagination()">
-      <option *ngFor="let opt of rowsPerPageOptions" [value]="opt">{{ opt }}</option>
+    <select [(ngModel)]="rowsPerPage" (change)="onRowsPerPageChange($event)">
+      <option *ngFor="let opt of rowsPerPageOptions" [ngValue]="opt">{{ opt }}</option>
     </select>
   </span>
 
   <span>
-    Showing <b>{{ startRow + 1 }}</b> to <b>{{ endRow }}</b> of {{ filteredRows.length }} elements
+    Showing <b>{{ startRow + 1 }}</b> to <b>{{ endRow }}</b> of {{ filteredRows.length }} rows
   </span>
 
   <span class="current-page">
@@ -67,7 +132,7 @@
         [ngModel]="selectAllChecked(col)"
         (ngModelChange)="toggleSelectAll(col, $event)">
       </p-checkbox>
-      <span>(Unselect/Select All)</span>
+      <span>(Select All)</span>
     </label>
 
     <div class="options-scroll">
